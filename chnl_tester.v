@@ -78,6 +78,7 @@ reg [C_PCI_DATA_WIDTH-1:0] rData={C_PCI_DATA_WIDTH{1'b0}};
 reg [31:0] rLen=0;
 reg [31:0] rCount=0;
 reg [1:0] rState=0;
+reg [C_PCI_DATA_WIDTH-1:0] buffer[24:0] = { 128'b0, 128'b0,128'b0,128'b0,128'b0,128'b0,128'b0, 128'b0,128'b0,128'b0,128'b0,128'b0,128'b0,128'b0, 128'b0,128'b0,128'b0,128'b0,128'b0,128'b0, 128'b0,128'b0,128'b0,128'b0,128'b0};    //zxy
 
 assign CHNL_RX_CLK = CLK;
 assign CHNL_RX_ACK = (rState == 2'd1);
@@ -111,7 +112,8 @@ always @(posedge CLK or posedge RST) begin
 		
 		2'd1: begin // Wait for last data in RX, save value
 			if (CHNL_RX_DATA_VALID) begin
-				rData <= #1 CHNL_RX_DATA;
+				//rData <= #1 CHNL_RX_DATA;    //zxy
+				buffer[rCount] <= #1 CHNL_RX_DATA;    //zxy
 				rCount <= #1 rCount + (C_PCI_DATA_WIDTH/32);
 			end
 			if (rCount >= rLen)
@@ -121,11 +123,13 @@ always @(posedge CLK or posedge RST) begin
 		2'd2: begin // Prepare for TX
 			rCount <= #1 (C_PCI_DATA_WIDTH/32);
 			rState <= #1 2'd3;
+			rData <= #1 buffer[0];    //zxy
 		end
 
 		2'd3: begin // Start TX with save length and data value
 			if (CHNL_TX_DATA_REN & CHNL_TX_DATA_VALID) begin
-				rData <= #1 {rCount + 4, rCount + 3, rCount + 2, rCount + 1};
+				//rData <= #1 {rCount + 4, rCount + 3, rCount + 2, rCount + 1};   //zxy
+				rData <= #1 buffer[rCount]; 
 				rCount <= #1 rCount + (C_PCI_DATA_WIDTH/32);
 				if (rCount >= rLen)
 					rState <= #1 2'd0;
